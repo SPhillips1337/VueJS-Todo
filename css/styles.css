@@ -1,0 +1,70 @@
+
+:root{font-family: Arial;}
+input[type=text]{
+  font-size:16px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #c4c4c4;
+}
+
+button{
+  background: #3498db;
+  background-image: linear-gradient(to bottom, #3498db, #2980b9);
+  border-radius: 28px;
+  
+  color: #ffffff;
+  font-size: 16px;
+  padding: 8px 20px;
+  border: none;
+  cursor:pointer;
+}
+button:hover {
+  background: #3cb0fd;
+  background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
+}
+input[type=text].error{border: 1px solid red;}
+[contenteditable=true]:focus{
+  
+  
+  overflow: hidden;
+  border: 1px solid transparent;
+
+  -webkit-appearance: textfield;
+  -moz-appearance: textfield;
+  appearance: textfield;
+
+  white-space: nowrap;
+  border-radius: 10px;
+  
+  
+  
+}
+
+.title{
+  display: inline-block;
+  width: 200px;
+  border: 1px solid transparent;
+  padding: 8px;
+  font-size: 16px;
+  vertical-align:middle;
+}
+
+.title:hover{
+  border:1px solid #c4c4c4;
+  border-radius: 10px;
+}
+
+.remove{
+  cursor:pointer;
+  display:inline-block;
+  border: 1px solid #c4c4c4;
+  border-radius: 50%;
+  padding:0px 4px;
+}
+.remove:hover{
+  background: #3cb0fd;
+}
+
+.completed{
+  text-decoration: line-through;
+}

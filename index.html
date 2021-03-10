@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+  <title>VUE JS Todo</title>
+
+  <script src="https://unpkg.com/vue"></script>
+  <script src="js/scripts.js"></script>
+
+</head>
+<body>
+  <div id="todoApp">
+    <h3>{{message}}</h3>
+    <form name="todo-form" method="post" action="" v-on:submit.prevent="addTask">
+      <input name="add-todo" v-model="addTodoInput" type="text" v-bind:class="{error: hasError}"/>
+      <button type="submit">Add</button>
+    </form>
+    
+    <div class="todo-lists" v-if="lists.length">
+      <h3>My Todo Tasks</h3>
+      <ul>
+        <li v-for="(list, index) in filterLists" :key="list.id">
+          <input type="checkbox" v-bind:id="'todo-' + index" v-on:change="completeTask($event, list)" v-bind:checked="list.isComplete"/>
+          <span class="title" contenteditable="true" v-on:keydown.enter="updateTask($event, list)" v-on:blur="updateTask($event, list)" v-bind:class="{completed: list.isComplete}">{{list.title}}</span> 
+          <span class="remove" v-on:click="removeTask(list)">x</span></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
