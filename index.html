@@ -179,6 +179,22 @@
               </div>
             </draggable>
             <button v-on:click="addSubtask" class="add-sub-btn">+ Add Sub-task</button>
+
+            <div class="ai-controls" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+              <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                <select v-model="aiProvider" style="padding: 0.25rem; border-radius: 4px; border: 1px solid #d1d5db;">
+                  <option value="ollama">Local Ollama</option>
+                  <option value="cloud">Cloud AI</option>
+                </select>
+                <button v-on:click="generateSubtasksForSelected" :disabled="isGenerating" class="btn-secondary" style="font-size: 0.875rem;">
+                  <span v-if="isGenerating">Generating...</span>
+                  <span v-else>✨ Generate with AI</span>
+                </button>
+              </div>
+              <p v-if="aiProvider === 'ollama'" style="font-size: 0.75rem; color: #6b7280;">
+                Ensure Ollama is running at http://localhost:11434 (allow CORS if needed).
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -200,6 +216,7 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.24.3/vuedraggable.min.js"></script>
+  <script src="js/ai-service.js"></script>
   <script src="js/scripts.js"></script>
 </body>
 

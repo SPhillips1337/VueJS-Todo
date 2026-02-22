@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', function () {
       addTodoInput: '',
       lists: [],
       hasError: false,
-      selectedTask: null
+      selectedTask: null,
+      aiProvider: 'ollama',
+      isGenerating: false
     },
     watch: {
       lists: {
@@ -34,6 +36,9 @@ document.addEventListener('DOMContentLoaded', function () {
           subtasks: [],
           githubUrl: '',
           status: 'pending',
+          is_agent_task: false,
+          target_repo: '',
+          agent_status: 'unassigned'
         };
 
         this.lists.push(newTodo);
@@ -77,7 +82,10 @@ document.addEventListener('DOMContentLoaded', function () {
           this.selectedTask.subtasks.push({
             id: Date.now() + Math.random(),
             title: '',
-            isComplete: false
+            isComplete: false,
+            is_agent_task: false,
+            target_repo: this.selectedTask.githubUrl || '',
+            agent_status: 'unassigned'
           });
         }
       },
@@ -139,14 +147,47 @@ document.addEventListener('DOMContentLoaded', function () {
               if (!list.githubUrl) {
                 list.githubUrl = "";
               }
+              // Subtask migration
+              if (list.subtasks) {
+                list.subtasks.forEach(sub => {
+                   if (sub.is_agent_task === undefined) sub.is_agent_task = false;
+                   if (!sub.target_repo) sub.target_repo = list.githubUrl || '';
+                   if (!sub.agent_status) sub.agent_status = 'unassigned';
+                });
+              }
             });
           } catch (e) {
             console.error('Failed to load data', e);
             this.lists = [];
           }
         }
+      },
+      generateSubtasksForSelected: async function() {
+        if (!this.selectedTask) return;
+
+        this.isGenerating = true;
+        try {
+          const newSubtasks = await AIService.generateSubtasks(this.selectedTask, this.aiProvider);
+
+          if (newSubtasks && Array.isArray(newSubtasks)) {
+             newSubtasks.forEach(sub => {
+               this.selectedTask.subtasks.push({
+                 id: Date.now() + Math.random(),
+                 title: sub.title,
+                 isComplete: false,
+                 is_agent_task: sub.is_agent_task || true,
+                 target_repo: this.selectedTask.githubUrl || '',
+                 agent_status: sub.agent_status || 'unassigned'
+               });
+             });
+          }
+        } catch (e) {
+          console.error("Failed to generate subtasks", e);
+          alert("Failed to generate subtasks. Check console for details.");
+        } finally {
+          this.isGenerating = false;
+        }
       }
     }
   })
 });
-
