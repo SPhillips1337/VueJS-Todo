@@ -1,5 +1,5 @@
 const AIService = {
-  ollamaEndpoint: 'http://localhost:11434/api/generate',
+  ollamaEndpoint: (window.OLLAMA_ENDPOINT || 'http://localhost:11434/api/generate'),
 
   async generateSubtasks(task, provider = 'ollama') {
     const prompt = this.constructPrompt(task);
@@ -16,7 +16,14 @@ const AIService = {
     const basePrompt = `Task: ${task.title}\nDescription: ${task.description || 'No description provided.'}`;
 
     if (task.githubUrl && task.githubUrl.trim() !== '') {
-      return `You are a senior software architect. Analyze the repository at ${task.githubUrl}.
+      const urlPattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+\/?$/;
+      if (!urlPattern.test(task.githubUrl.trim())) {
+        throw new Error('Invalid GitHub repository URL format. Must be https://github.com/user/repo');
+      }
+      // Sanitize URL to prevent injection
+      const sanitizedUrl = task.githubUrl.trim().replace(/[^\w\s:\/\.-]/g, '');
+
+      return `You are a senior software architect. Analyze the repository at ${sanitizedUrl}.
 Context: ${basePrompt}
 Generate 3-5 strategic subtasks focusing on code structure, implementation steps, and testing.
 Output purely a JSON array of objects with "title" and "is_agent_task": true.`;

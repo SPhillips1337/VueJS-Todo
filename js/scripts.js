@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         this.hasError = false;
         const newTodo = {
-          id: Date.now() + Math.random(),
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           title: this.addTodoInput.trim(),
           description: '',
           isComplete: false,
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
       addSubtask: function () {
         if (this.selectedTask) {
           this.selectedTask.subtasks.push({
-            id: Date.now() + Math.random(),
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             title: '',
             isComplete: false,
             is_agent_task: false,
@@ -172,10 +172,10 @@ document.addEventListener('DOMContentLoaded', function () {
           if (newSubtasks && Array.isArray(newSubtasks)) {
              newSubtasks.forEach(sub => {
                this.selectedTask.subtasks.push({
-                 id: Date.now() + Math.random(),
+                 id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                  title: sub.title,
                  isComplete: false,
-                 is_agent_task: sub.is_agent_task || true,
+                 is_agent_task: sub.is_agent_task ?? false,
                  target_repo: this.selectedTask.githubUrl || '',
                  agent_status: sub.agent_status || 'unassigned'
                });
