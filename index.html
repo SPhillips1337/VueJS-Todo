@@ -18,6 +18,7 @@
       justify-content: center;
       gap: 1rem;
     }
+
     .btn-secondary {
       background: white;
       border: 1px solid #d1d5db;
@@ -27,11 +28,13 @@
       font-weight: 500;
       color: var(--text-main);
     }
+
     .btn-secondary:hover {
       background: #f3f4f6;
       border-color: var(--primary);
       color: var(--primary);
     }
+
     .status-badge {
       font-size: 0.75rem;
       padding: 0.25rem 0.5rem;
@@ -42,9 +45,22 @@
       cursor: pointer;
       user-select: none;
     }
-    .status-badge.pending { background: #e5e7eb; color: #374151; }
-    .status-badge.in-progress { background: #fef3c7; color: #d97706; }
-    .status-badge.completed { background: #d1fae5; color: #059669; }
+
+    .status-badge.pending {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .status-badge.in-progress {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .status-badge.completed {
+      background: #d1fae5;
+      color: #059669;
+    }
+
     .status-select {
       width: 100%;
       padding: 0.5rem;
@@ -63,7 +79,58 @@
       <div class="header-actions">
         <button class="btn-secondary" v-on:click="exportData">Export JSON</button>
         <button class="btn-secondary" v-on:click="triggerImport">Import JSON</button>
+        <button class="btn-secondary" v-on:click="openSettings">⚙️ Settings</button>
         <input type="file" ref="fileInput" v-on:change="importData" style="display: none" accept=".json">
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" v-if="showSettings" v-on:click.self="closeSettings">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>AI & System Settings</h2>
+          <span class="remove-btn" v-on:click="closeSettings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </span>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label>Local Ollama URL</label>
+            <input type="text" v-model="aiSettings.ollamaEndpoint" placeholder="http://localhost:11434/api/generate">
+          </div>
+          <div class="input-group">
+            <label>Ollama Model Name</label>
+            <input type="text" v-model="aiSettings.ollamaModel" placeholder="llama3">
+          </div>
+          <div class="input-group">
+            <label>Cloud AI Provider URL</label>
+            <input type="text" v-model="aiSettings.cloudEndpoint"
+              placeholder="https://api.openai.com/v1/chat/completions">
+          </div>
+          <div class="input-group">
+            <label>Cloud AI Model Name</label>
+            <input type="text" v-model="aiSettings.cloudModel" placeholder="gpt-4o">
+          </div>
+          <div class="input-group">
+            <label>Cloud AI API Key</label>
+            <input type="password" v-model="aiSettings.cloudKey" placeholder="sk-...">
+          </div>
+          <div class="input-group">
+            <label>GitHub MCP Server URL</label>
+            <input type="text" v-model="aiSettings.githubMcpUrl" placeholder="http://localhost:3000/github">
+          </div>
+          <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">
+            Note: These settings are saved locally in your browser.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" v-on:click="closeSettings">Cancel</button>
+          <button class="btn-primary" v-on:click="saveSettings">Save Settings</button>
+        </div>
       </div>
     </div>
 
@@ -80,8 +147,18 @@
           <draggable class="todo-lists" v-model="lists" tag="ul" handle=".drag-handle">
             <li v-for="(list, index) in lists" :key="list.id" class="todo-item"
               v-bind:class="{ active: selectedTask && selectedTask.id === list.id }" v-on:click="selectTask(list)">
-              <span class="drag-handle" style="cursor: grab; margin-right: 0.5rem; color: #9ca3af;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
-              <input type="checkbox" v-on:change.stop="completeTask($event, list)" v-bind:checked="list.isComplete" /> <span class="status-badge" :class="list.status" @click.stop="cycleStatus(list)">{{ list.status }}</span>
+              <span class="drag-handle" style="cursor: grab; margin-right: 0.5rem; color: #9ca3af;"><svg
+                  xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="9" cy="12" r="1"></circle>
+                  <circle cx="9" cy="5" r="1"></circle>
+                  <circle cx="9" cy="19" r="1"></circle>
+                  <circle cx="15" cy="12" r="1"></circle>
+                  <circle cx="15" cy="5" r="1"></circle>
+                  <circle cx="15" cy="19" r="1"></circle>
+                </svg></span>
+              <input type="checkbox" v-on:change.stop="completeTask($event, list)" v-bind:checked="list.isComplete" />
+              <span class="status-badge" :class="list.status" @click.stop="cycleStatus(list)">{{ list.status }}</span>
               <span class="todo-title" v-bind:class="{completed: list.isComplete}">{{list.title}}</span>
               <span class="remove-btn" v-on:click.stop="removeTask(list)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -122,9 +199,17 @@
           <div class="form-group">
             <label>GitHub Project URL</label>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <input type="text" v-model="selectedTask.githubUrl" class="text-input" placeholder="https://github.com/..." style="flex-grow: 1; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 8px;" />
-              <a v-if="selectedTask.githubUrl" :href="selectedTask.githubUrl" target="_blank" rel="noopener noreferrer" title="Open GitHub Project" style="color: var(--primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+              <input type="text" v-model="selectedTask.githubUrl" class="text-input"
+                placeholder="https://github.com/..."
+                style="flex-grow: 1; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 8px;" />
+              <a v-if="selectedTask.githubUrl" :href="selectedTask.githubUrl" target="_blank" rel="noopener noreferrer"
+                title="Open GitHub Project" style="color: var(--primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
+                  </path>
+                </svg>
               </a>
             </div>
           </div>
@@ -166,7 +251,16 @@
             </h3>
             <draggable v-model="selectedTask.subtasks" class="subtask-list" handle=".drag-handle">
               <div v-for="(sub, sIdx) in selectedTask.subtasks" :key="sub.id" class="subtask-item">
-                <span class="drag-handle" style="cursor: grab; margin-right: 0.5rem; color: #9ca3af;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg></span>
+                <span class="drag-handle" style="cursor: grab; margin-right: 0.5rem; color: #9ca3af;"><svg
+                    xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="12" r="1"></circle>
+                    <circle cx="9" cy="5" r="1"></circle>
+                    <circle cx="9" cy="19" r="1"></circle>
+                    <circle cx="15" cy="12" r="1"></circle>
+                    <circle cx="15" cy="5" r="1"></circle>
+                    <circle cx="15" cy="19" r="1"></circle>
+                  </svg></span>
                 <input type="checkbox" v-model="sub.isComplete" />
                 <input type="text" v-model="sub.title" placeholder="What needs to be done?" />
                 <span class="remove-btn" v-on:click="removeSubtask(sIdx)" title="Remove sub-task">
@@ -186,7 +280,8 @@
                   <option value="ollama">Local Ollama</option>
                   <option value="cloud">Cloud AI</option>
                 </select>
-                <button v-on:click="generateSubtasksForSelected" :disabled="isGenerating" class="btn-secondary" style="font-size: 0.875rem;">
+                <button v-on:click="generateSubtasksForSelected" :disabled="isGenerating" class="btn-secondary"
+                  style="font-size: 0.875rem;">
                   <span v-if="isGenerating">Generating...</span>
                   <span v-else>✨ Generate with AI</span>
                 </button>

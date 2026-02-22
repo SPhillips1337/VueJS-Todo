@@ -7,7 +7,16 @@ document.addEventListener('DOMContentLoaded', function () {
       hasError: false,
       selectedTask: null,
       aiProvider: 'ollama',
-      isGenerating: false
+      isGenerating: false,
+      showSettings: false,
+      aiSettings: {
+        ollamaEndpoint: 'http://localhost:11434/api/generate',
+        ollamaModel: 'llama3',
+        cloudEndpoint: '',
+        cloudModel: 'gpt-4o',
+        cloudKey: '',
+        githubMcpUrl: ''
+      }
     },
     watch: {
       lists: {
@@ -19,8 +28,31 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     mounted: function () {
       this.loadData();
+      this.loadSettings();
     },
     methods: {
+      openSettings: function () {
+        this.showSettings = true;
+      },
+      closeSettings: function () {
+        this.showSettings = false;
+        this.loadSettings(); // Revert changes if not saved
+      },
+      saveSettings: function () {
+        localStorage.setItem('todo_ai_settings', JSON.stringify(this.aiSettings));
+        this.showSettings = false;
+        // Update AIService global settings if needed, though it reads from storage
+      },
+      loadSettings: function () {
+        const settings = localStorage.getItem('todo_ai_settings');
+        if (settings) {
+          try {
+            this.aiSettings = Object.assign({}, this.aiSettings, JSON.parse(settings));
+          } catch (e) {
+            console.error('Failed to load settings', e);
+          }
+        }
+      },
       addTask: function () {
         if (!this.addTodoInput.trim()) {
           this.hasError = true;
@@ -150,9 +182,9 @@ document.addEventListener('DOMContentLoaded', function () {
               // Subtask migration
               if (list.subtasks) {
                 list.subtasks.forEach(sub => {
-                   if (sub.is_agent_task === undefined) sub.is_agent_task = false;
-                   if (!sub.target_repo) sub.target_repo = list.githubUrl || '';
-                   if (!sub.agent_status) sub.agent_status = 'unassigned';
+                  if (sub.is_agent_task === undefined) sub.is_agent_task = false;
+                  if (!sub.target_repo) sub.target_repo = list.githubUrl || '';
+                  if (!sub.agent_status) sub.agent_status = 'unassigned';
                 });
               }
             });
@@ -162,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
       },
-      generateSubtasksForSelected: async function() {
+      generateSubtasksForSelected: async function () {
         if (!this.selectedTask) return;
 
         this.isGenerating = true;
@@ -170,16 +202,16 @@ document.addEventListener('DOMContentLoaded', function () {
           const newSubtasks = await AIService.generateSubtasks(this.selectedTask, this.aiProvider);
 
           if (newSubtasks && Array.isArray(newSubtasks)) {
-             newSubtasks.forEach(sub => {
-               this.selectedTask.subtasks.push({
-                 id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                 title: sub.title,
-                 isComplete: false,
-                 is_agent_task: sub.is_agent_task ?? false,
-                 target_repo: this.selectedTask.githubUrl || '',
-                 agent_status: sub.agent_status || 'unassigned'
-               });
-             });
+            newSubtasks.forEach(sub => {
+              this.selectedTask.subtasks.push({
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                title: sub.title,
+                isComplete: false,
+                is_agent_task: sub.is_agent_task ?? false,
+                target_repo: this.selectedTask.githubUrl || '',
+                agent_status: sub.agent_status || 'unassigned'
+              });
+            });
           }
         } catch (e) {
           console.error("Failed to generate subtasks", e);
