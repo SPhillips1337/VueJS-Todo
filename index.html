@@ -1,30 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8"/>
-  <title>VUE JS Todo</title>
-
-  <script src="https://unpkg.com/vue"></script>
-  <script src="js/scripts.js"></script>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Premium VueJS Todo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/vue@2"></script>
+  <script src="https://unpkg.com/lodash@4"></script>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
   <div id="todoApp">
-    <h3>{{message}}</h3>
-    <form name="todo-form" method="post" action="" v-on:submit.prevent="addTask">
-      <input name="add-todo" v-model="addTodoInput" type="text" v-bind:class="{error: hasError}"/>
-      <button type="submit">Add</button>
-    </form>
-    
-    <div class="todo-lists" v-if="lists.length">
-      <h3>My Todo Tasks</h3>
-      <ul>
-        <li v-for="(list, index) in filterLists" :key="list.id">
-          <input type="checkbox" v-bind:id="'todo-' + index" v-on:change="completeTask($event, list)" v-bind:checked="list.isComplete"/>
-          <span class="title" contenteditable="true" v-on:keydown.enter="updateTask($event, list)" v-on:blur="updateTask($event, list)" v-bind:class="{completed: list.isComplete}">{{list.title}}</span> 
-          <span class="remove" v-on:click="removeTask(list)">x</span></li>
-      </ul>
+    <div class="header">
+      <h1>TaskMaster</h1>
+    </div>
+
+    <div class="main-layout">
+      <!-- Left Column: List and Add Form -->
+      <section class="list-section">
+        <form class="add-form" v-on:submit.prevent="addTask">
+          <textarea name="add-todo" v-model="addTodoInput" placeholder="What needs to be done?"
+            v-bind:class="{error: hasError}" v-on:keydown.enter.exact.prevent="addTask"></textarea>
+          <button type="submit" class="add-btn">Add Task</button>
+        </form>
+
+        <div class="todo-container" v-if="lists.length">
+          <ul class="todo-lists">
+            <li v-for="(list, index) in filterLists" :key="list.id" class="todo-item"
+              v-bind:class="{ active: selectedTask && selectedTask.id === list.id }" v-on:click="selectTask(list)">
+              <input type="checkbox" v-on:change.stop="completeTask($event, list)" v-bind:checked="list.isComplete" />
+              <span class="todo-title" v-bind:class="{completed: list.isComplete}">{{list.title}}</span>
+              <span class="remove-btn" v-on:click.stop="removeTask(list)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <div v-else class="placeholder-text">
+          No tasks yet. Add one above to get started!
+        </div>
+      </section>
+
+      <!-- Right Column: Detail View -->
+      <section class="detail-section" v-bind:class="{ show: selectedTask }" v-if="selectedTask">
+        <div class="detail-header">
+          <h2>Task Details</h2>
+          <span class="remove-btn" v-on:click="selectedTask = null" title="Close details">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </span>
+        </div>
+
+        <div class="detail-content">
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" v-model="selectedTask.title" class="title-input" placeholder="Task title" />
+          </div>
+
+          <div class="form-group">
+            <label>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="vertical-align: middle; margin-right: 4px;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              Description & Notes
+            </label>
+            <textarea class="desc" v-model="selectedTask.description"
+              placeholder="Add more details about this task..."></textarea>
+          </div>
+
+          <div class="subtasks-section">
+            <h3>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="vertical-align: middle;">
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+              Sub-tasks
+            </h3>
+            <div class="subtask-list">
+              <div v-for="(sub, sIdx) in selectedTask.subtasks" :key="sub.id" class="subtask-item">
+                <input type="checkbox" v-model="sub.isComplete" />
+                <input type="text" v-model="sub.title" placeholder="What needs to be done?" />
+                <span class="remove-btn" v-on:click="removeSubtask(sIdx)" title="Remove sub-task">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </span>
+              </div>
+            </div>
+            <button v-on:click="addSubtask" class="add-sub-btn">+ Add Sub-task</button>
+          </div>
+        </div>
+      </section>
+      <section class="detail-section" v-else>
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+            stroke="#e5e7eb" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+            style="margin-bottom: 1rem;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div class="placeholder-text">
+            Select a task to view details and sub-tasks.
+          </div>
+        </div>
+      </section>
     </div>
   </div>
+  <script src="js/scripts.js"></script>
 </body>
+
 </html>
