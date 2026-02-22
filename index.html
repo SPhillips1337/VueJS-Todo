@@ -157,9 +157,14 @@
                   <circle cx="15" cy="5" r="1"></circle>
                   <circle cx="15" cy="19" r="1"></circle>
                 </svg></span>
-              <input type="checkbox" v-on:change.stop="completeTask($event, list)" v-bind:checked="list.isComplete" />
-              <span class="status-badge" :class="list.status" @click.stop="cycleStatus(list)">{{ list.status }}</span>
-              <span class="todo-title" v-bind:class="{completed: list.isComplete}">{{list.title}}</span>
+              <div class="todo-content">
+                <span class="status-badge" :class="list.status" v-on:click.stop="cycleStatus(list)">{{ list.status
+                  }}</span>
+                <div class="todo-text">
+                  <span class="todo-title" :class="{ completed: list.status === 'completed' }">{{ list.title }}</span>
+                  <p class="todo-desc" v-if="list.description">{{ list.description | truncate(60) }}</p>
+                </div>
+              </div>
               <span class="remove-btn" v-on:click.stop="removeTask(list)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -216,7 +221,7 @@
 
           <div class="form-group">
             <label>Status</label>
-            <select v-model="selectedTask.status" class="status-select">
+            <select v-model="selectedTask.status" class="status-select" v-on:change="saveData">
               <option value="pending">Pending</option>
               <option value="in-progress">In Progress</option>
               <option value="completed">Completed</option>

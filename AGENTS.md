@@ -14,7 +14,8 @@ The following principles guided the AI assistance in this project:
 
 - **UI/UX Design**: Generation of the modern glassmorphism design system and responsive layout strategy.
 - **Architectural Enhancements**: Redesigning the todo data structure to support sub-tasks and detailed notes.
-- **Feature Development**: Implementation of logic for sub-task management and `localStorage` persistence.
+- **AI Service Integration**: Implementation of a flexible AI service layer supporting multiple providers, custom endpoints, and model selection.
+- **Feature Development**: Implementation of logic for sub-task management, `localStorage` persistence, and AI-powered task automation.
 - **Documentation**: Generation of `README.md` and `AGENTS.md` to ensure project clarity.
 
 ## Tools Used
