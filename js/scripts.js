@@ -1,4 +1,27 @@
 document.addEventListener('DOMContentLoaded', function () {
+  // Register components and filters
+  // Register components and filters
+  var draggableComponent = window.vuedraggable || window.VueDraggable || (typeof vuedraggable !== 'undefined' ? vuedraggable : null);
+
+  if (draggableComponent) {
+    // If it's the module with .default, use that (some UMD wrappers do this)
+    if (draggableComponent.default) draggableComponent = draggableComponent.default;
+    Vue.component('draggable', draggableComponent);
+    console.log('vuedraggable registered successfully');
+  } else {
+    console.error('vuedraggable not found. Checked: window.vuedraggable, window.VueDraggable, vuedraggable');
+  }
+  Vue.filter('truncate', function (text, length) {
+    if (!text) return '';
+    return text.length > length ? text.substring(0, length) + '...' : text;
+  });
+
+  Vue.directive('focus', {
+    inserted: function (el) {
+      el.focus();
+    }
+  });
+
   var todoApp = new Vue({
     el: '#todoApp',
     data: {
@@ -8,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
       selectedTask: null, editingId: null,
       aiProvider: 'ollama',
       isGenerating: false,
-      showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null,
+      showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null, originalTitle: null,
       aiSettings: {
         ollamaEndpoint: 'http://localhost:11434/api/generate',
         ollamaModel: 'llama3',
@@ -18,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function () {
         githubMcpUrl: ''
       }
     },
-        computed: {
+    computed: {
       filteredLists: function () {
         let result = this.lists.slice();
 
@@ -29,33 +52,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Sort
         if (this.sortBy === "date") {
-            result.sort((a, b) => {
-                const dateA = parseInt(a.id.split("-")[0]);
-                const dateB = parseInt(b.id.split("-")[0]);
-                return this.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-            });
+          result.sort((a, b) => {
+            const dateA = parseInt(a.id.split("-")[0]);
+            const dateB = parseInt(b.id.split("-")[0]);
+            return this.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+          });
         } else if (this.sortBy === "title") {
-            result.sort((a, b) => {
-                const titleA = a.title.toLowerCase();
-                const titleB = b.title.toLowerCase();
-                if (titleA < titleB) return this.sortOrder === "asc" ? -1 : 1;
-                if (titleA > titleB) return this.sortOrder === "asc" ? 1 : -1;
-                return 0;
-            });
+          result.sort((a, b) => {
+            const titleA = a.title.toLowerCase();
+            const titleB = b.title.toLowerCase();
+            if (titleA < titleB) return this.sortOrder === "asc" ? -1 : 1;
+            if (titleA > titleB) return this.sortOrder === "asc" ? 1 : -1;
+            return 0;
+          });
         } else if (this.sortBy === "status") {
-            result.sort((a, b) => {
-                const statusA = a.status.toLowerCase();
-                const statusB = b.status.toLowerCase();
-                 if (statusA < statusB) return this.sortOrder === "asc" ? -1 : 1;
-                if (statusA > statusB) return this.sortOrder === "asc" ? 1 : -1;
-                return 0;
-            });
+          result.sort((a, b) => {
+            const statusA = a.status.toLowerCase();
+            const statusB = b.status.toLowerCase();
+            if (statusA < statusB) return this.sortOrder === "asc" ? -1 : 1;
+            if (statusA > statusB) return this.sortOrder === "asc" ? 1 : -1;
+            return 0;
+          });
         }
 
         return result;
       }
     },
-watch: {
+    watch: {
       lists: {
         handler: function (newLists) {
           this.saveData();
@@ -165,10 +188,30 @@ watch: {
       },
       startEdit: function (list) {
         this.editingId = list.id;
+        this.originalTitle = list.title;
+        this.$nextTick(() => {
+          const refName = 'editInput-' + list.id;
+          const el = this.$refs[refName];
+          if (el) {
+            if (Array.isArray(el)) {
+              el[0].focus();
+            } else {
+              el.focus();
+            }
+          }
+        });
       },
       stopEdit: function () {
         this.editingId = null;
+        this.originalTitle = null;
         this.saveData();
+      },
+      cancelEdit: function (list) {
+        if (this.editingId === list.id && this.originalTitle !== null) {
+          list.title = this.originalTitle;
+        }
+        this.editingId = null;
+        this.originalTitle = null;
       },
       selectTask: function (list) {
         this.selectedTask = list;

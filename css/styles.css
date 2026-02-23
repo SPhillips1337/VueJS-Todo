@@ -143,6 +143,11 @@ button.add-btn:hover {
   cursor: pointer;
 }
 
+.todo-content {
+  flex-grow: 1;
+  width: 100%;
+}
+
 .todo-title {
   flex-grow: 1;
   font-weight: 500;
@@ -439,6 +444,7 @@ textarea.desc:focus {
   margin-top: 4rem;
   font-style: italic;
 }
+
 /* Maximized View */
 .main-layout.maximized {
   grid-template-columns: 1fr;
@@ -460,13 +466,18 @@ textarea.desc:focus {
 }
 
 .edit-todo-input {
-  width: 98%;
-  padding: 0.25rem 0.5rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem;
   font-size: 1rem;
   font-weight: 500;
-  border: 1px solid var(--primary);
-  border-radius: 4px;
+  font-family: inherit;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
   outline: none;
+  background: white;
+  resize: vertical;
+  display: block;
 }
 
 /* Filter & Sort */
