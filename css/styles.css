@@ -26,8 +26,8 @@ body {
 }
 
 #todoApp {
-  width: 100%;
-  max-width: 1200px;
+  width: 98%;
+  max-width: none;
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -72,7 +72,7 @@ body {
 }
 
 textarea {
-  width: 100%;
+  width: 98%;
   padding: 1rem;
   border-radius: 12px;
   border: 1px solid #d1d5db;
@@ -141,6 +141,11 @@ button.add-btn:hover {
   width: 20px;
   height: 20px;
   cursor: pointer;
+}
+
+.todo-content {
+  flex-grow: 1;
+  width: 100%;
 }
 
 .todo-title {
@@ -219,7 +224,7 @@ button.add-btn:hover {
   border: none;
   padding: 0;
   background: transparent;
-  width: 100%;
+  width: 98%;
 }
 
 .title-input:focus {
@@ -342,7 +347,7 @@ textarea.desc:focus {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 98%;
   height: 100%;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(4px);
@@ -410,7 +415,7 @@ textarea.desc:focus {
   border-radius: 8px;
   border: 1px solid #d1d5db;
   font-size: 0.875rem;
-  width: 100%;
+  width: 98%;
 }
 
 .input-group input:focus {
@@ -438,4 +443,77 @@ textarea.desc:focus {
   text-align: center;
   margin-top: 4rem;
   font-style: italic;
+}
+
+/* Maximized View */
+.main-layout.maximized {
+  grid-template-columns: 1fr;
+}
+
+.main-layout.maximized .list-section {
+  display: none;
+}
+
+.main-layout.maximized .detail-section {
+  width: 98%;
+}
+
+/* Todo Actions & Edit */
+.todo-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.edit-todo-input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  outline: none;
+  background: white;
+  resize: vertical;
+  display: block;
+}
+
+/* Filter & Sort */
+.filter-btn {
+  background: white;
+  border: 1px solid #d1d5db;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.filter-btn:hover {
+  background: #f3f4f6;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.sort-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--primary);
 }

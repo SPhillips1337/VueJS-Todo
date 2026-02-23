@@ -1,14 +1,37 @@
 document.addEventListener('DOMContentLoaded', function () {
+  // Register components and filters
+  // Register components and filters
+  var draggableComponent = window.vuedraggable || window.VueDraggable || (typeof vuedraggable !== 'undefined' ? vuedraggable : null);
+
+  if (draggableComponent) {
+    // If it's the module with .default, use that (some UMD wrappers do this)
+    if (draggableComponent.default) draggableComponent = draggableComponent.default;
+    Vue.component('draggable', draggableComponent);
+    console.log('vuedraggable registered successfully');
+  } else {
+    console.error('vuedraggable not found. Checked: window.vuedraggable, window.VueDraggable, vuedraggable');
+  }
+  Vue.filter('truncate', function (text, length) {
+    if (!text) return '';
+    return text.length > length ? text.substring(0, length) + '...' : text;
+  });
+
+  Vue.directive('focus', {
+    inserted: function (el) {
+      el.focus();
+    }
+  });
+
   var todoApp = new Vue({
     el: '#todoApp',
     data: {
       addTodoInput: '',
       lists: [],
       hasError: false,
-      selectedTask: null,
+      selectedTask: null, editingId: null,
       aiProvider: 'ollama',
       isGenerating: false,
-      showSettings: false,
+      showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null, originalTitle: null,
       aiSettings: {
         ollamaEndpoint: 'http://localhost:11434/api/generate',
         ollamaModel: 'llama3',
@@ -16,6 +39,43 @@ document.addEventListener('DOMContentLoaded', function () {
         cloudModel: 'gpt-4o',
         cloudKey: '',
         githubMcpUrl: ''
+      }
+    },
+    computed: {
+      filteredLists: function () {
+        let result = this.lists.slice();
+
+        // Filter
+        if (this.filterStatus !== "all") {
+          result = result.filter(item => item.status === this.filterStatus);
+        }
+
+        // Sort
+        if (this.sortBy === "date") {
+          result.sort((a, b) => {
+            const dateA = parseInt(a.id.split("-")[0]);
+            const dateB = parseInt(b.id.split("-")[0]);
+            return this.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+          });
+        } else if (this.sortBy === "title") {
+          result.sort((a, b) => {
+            const titleA = a.title.toLowerCase();
+            const titleB = b.title.toLowerCase();
+            if (titleA < titleB) return this.sortOrder === "asc" ? -1 : 1;
+            if (titleA > titleB) return this.sortOrder === "asc" ? 1 : -1;
+            return 0;
+          });
+        } else if (this.sortBy === "status") {
+          result.sort((a, b) => {
+            const statusA = a.status.toLowerCase();
+            const statusB = b.status.toLowerCase();
+            if (statusA < statusB) return this.sortOrder === "asc" ? -1 : 1;
+            if (statusA > statusB) return this.sortOrder === "asc" ? 1 : -1;
+            return 0;
+          });
+        }
+
+        return result;
       }
     },
     watch: {
@@ -33,6 +93,26 @@ document.addEventListener('DOMContentLoaded', function () {
     methods: {
       openSettings: function () {
         this.showSettings = true;
+      },
+      toggleMaximize: function () {
+        this.isMaximized = !this.isMaximized;
+      },
+      openSubtaskModal: function (subtask) {
+        this.originalSubtask = subtask;
+        this.editingSubtask = Object.assign({}, subtask);
+        this.showSubtaskModal = true;
+      },
+      closeSubtaskModal: function () {
+        this.showSubtaskModal = false;
+        this.editingSubtask = null;
+        this.originalSubtask = null;
+      },
+      saveSubtask: function () {
+        if (this.originalSubtask && this.editingSubtask) {
+          Object.assign(this.originalSubtask, this.editingSubtask);
+          this.saveData();
+        }
+        this.closeSubtaskModal();
       },
       closeSettings: function () {
         this.showSettings = false;
@@ -106,6 +186,33 @@ document.addEventListener('DOMContentLoaded', function () {
           list.isComplete = false;
         }
       },
+      startEdit: function (list) {
+        this.editingId = list.id;
+        this.originalTitle = list.title;
+        this.$nextTick(() => {
+          const refName = 'editInput-' + list.id;
+          const el = this.$refs[refName];
+          if (el) {
+            if (Array.isArray(el)) {
+              el[0].focus();
+            } else {
+              el.focus();
+            }
+          }
+        });
+      },
+      stopEdit: function () {
+        this.editingId = null;
+        this.originalTitle = null;
+        this.saveData();
+      },
+      cancelEdit: function (list) {
+        if (this.editingId === list.id && this.originalTitle !== null) {
+          list.title = this.originalTitle;
+        }
+        this.editingId = null;
+        this.originalTitle = null;
+      },
       selectTask: function (list) {
         this.selectedTask = list;
       },
@@ -114,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
           this.selectedTask.subtasks.push({
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             title: '',
+            description: '',
             isComplete: false,
             is_agent_task: false,
             target_repo: this.selectedTask.githubUrl || '',
@@ -183,6 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
               if (list.subtasks) {
                 list.subtasks.forEach(sub => {
                   if (sub.is_agent_task === undefined) sub.is_agent_task = false;
+                  if (!sub.description) sub.description = '';
                   if (!sub.target_repo) sub.target_repo = list.githubUrl || '';
                   if (!sub.agent_status) sub.agent_status = 'unassigned';
                 });
@@ -206,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
               this.selectedTask.subtasks.push({
                 id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 title: sub.title,
+                description: sub.description || '',
                 isComplete: false,
                 is_agent_task: sub.is_agent_task ?? false,
                 target_repo: this.selectedTask.githubUrl || '',

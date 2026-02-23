@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/vue@2"></script>
   <script src="https://unpkg.com/lodash@4"></script>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=8">
   <style>
     .header-actions {
       margin-top: 1rem;
@@ -83,6 +83,41 @@
         <input type="file" ref="fileInput" v-on:change="importData" style="display: none" accept=".json">
       </div>
     </div>
+    <!-- Subtask Edit Modal -->
+    <div class="modal-backdrop" v-if="showSubtaskModal" v-on:click.self="closeSubtaskModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Edit Sub-task</h2>
+          <span class="remove-btn" v-on:click="closeSubtaskModal">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </span>
+        </div>
+        <div class="modal-body" v-if="editingSubtask">
+          <div class="input-group">
+            <label>Title</label>
+            <input type="text" v-model="editingSubtask.title" placeholder="What needs to be done?"
+              v-on:keydown.enter="saveSubtask">
+          </div>
+          <div class="input-group">
+            <label>Description</label>
+            <textarea v-model="editingSubtask.description" placeholder="Add details for this sub-task..."
+              style="min-height: 100px;"></textarea>
+          </div>
+          <div class="input-group" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" v-model="editingSubtask.isComplete" id="subtask-complete" style="width: auto;">
+            <label for="subtask-complete" style="margin: 0; cursor: pointer;">Completed</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" v-on:click="closeSubtaskModal">Cancel</button>
+          <button class="btn-primary" v-on:click="saveSubtask">Save Changes</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Settings Modal -->
     <div class="modal-backdrop" v-if="showSettings" v-on:click.self="closeSettings">
@@ -134,7 +169,7 @@
       </div>
     </div>
 
-    <div class="main-layout">
+    <div class="main-layout" :class="{ maximized: isMaximized }">
       <!-- Left Column: List and Add Form -->
       <section class="list-section">
         <form class="add-form" v-on:submit.prevent="addTask">
@@ -144,7 +179,33 @@
         </form>
 
         <div class="todo-container" v-if="lists.length">
-          <draggable class="todo-lists" v-model="lists" tag="ul" handle=".drag-handle">
+          <div class="filter-controls"
+            style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div class="status-filters" style="display: flex; gap: 0.5rem;">
+              <button class="filter-btn" :class="{ active: filterStatus === 'all' }"
+                @click="filterStatus = 'all'">All</button>
+              <button class="filter-btn" :class="{ active: filterStatus === 'pending' }"
+                @click="filterStatus = 'pending'">Pending</button>
+              <button class="filter-btn" :class="{ active: filterStatus === 'in-progress' }"
+                @click="filterStatus = 'in-progress'">In Progress</button>
+              <button class="filter-btn" :class="{ active: filterStatus === 'completed' }"
+                @click="filterStatus = 'completed'">Completed</button>
+            </div>
+            <div class="sort-controls" style="display: flex; gap: 0.5rem;">
+              <select v-model="sortBy" class="sort-select">
+                <option value="date">Date</option>
+                <option value="title">Title</option>
+                <option value="status">Status</option>
+              </select>
+              <select v-model="sortOrder" class="sort-select">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
+          </div>
+
+          <draggable v-if="filterStatus === 'all' && sortBy === 'date' && sortOrder === 'desc'" class="todo-lists"
+            v-model="lists" tag="ul" handle=".drag-handle">
             <li v-for="(list, index) in lists" :key="list.id" class="todo-item"
               v-bind:class="{ active: selectedTask && selectedTask.id === list.id }" v-on:click="selectTask(list)">
               <span class="drag-handle" style="cursor: grab; margin-right: 0.5rem; color: #9ca3af;"><svg
@@ -161,22 +222,81 @@
                 <span class="status-badge" :class="list.status" v-on:click.stop="cycleStatus(list)">{{ list.status
                   }}</span>
                 <div class="todo-text">
-                  <span class="todo-title" :class="{ completed: list.status === 'completed' }">{{ list.title }}</span>
+                  <textarea v-if="editingId === list.id" v-model="list.title" v-on:blur="stopEdit"
+                    v-on:keydown.enter.exact.prevent="stopEdit" v-on:keydown.esc="cancelEdit(list)"
+                    class="edit-todo-input" v-on:click.stop :ref="'editInput-' + list.id" v-focus autofocus></textarea>
+                  <span v-else class="todo-title" :class="{ completed: list.status === 'completed' }">{{ list.title
+                    }}</span>
                   <p class="todo-desc" v-if="list.description">{{ list.description | truncate(60) }}</p>
                 </div>
               </div>
-              <span class="remove-btn" v-on:click.stop="removeTask(list)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  <line x1="10" y1="11" x2="10" y2="17"></line>
-                  <line x1="14" y1="11" x2="14" y2="17"></line>
-                </svg>
-              </span>
+              <div class="todo-actions">
+                <span class="remove-btn" v-on:click.stop="startEdit(list)" title="Edit Title">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </span>
+                <span class="remove-btn" v-on:click.stop="removeTask(list)" title="Remove Task">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </span>
+              </div>
             </li>
           </draggable>
+          <ul v-else class="todo-lists">
+            <li v-for="(list, index) in filteredLists" :key="list.id" class="todo-item"
+              v-bind:class="{ active: selectedTask && selectedTask.id === list.id }" v-on:click="selectTask(list)">
+              <span class="drag-handle" style="cursor: grab; margin-right: 0.5rem; color: #9ca3af;"><svg
+                  xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="9" cy="12" r="1"></circle>
+                  <circle cx="9" cy="5" r="1"></circle>
+                  <circle cx="9" cy="19" r="1"></circle>
+                  <circle cx="15" cy="12" r="1"></circle>
+                  <circle cx="15" cy="5" r="1"></circle>
+                  <circle cx="15" cy="19" r="1"></circle>
+                </svg></span>
+              <div class="todo-content">
+                <span class="status-badge" :class="list.status" v-on:click.stop="cycleStatus(list)">{{ list.status
+                  }}</span>
+                <div class="todo-text">
+                  <textarea v-if="editingId === list.id" v-model="list.title" v-on:blur="stopEdit"
+                    v-on:keydown.enter.exact.prevent="stopEdit" v-on:keydown.esc="cancelEdit(list)"
+                    class="edit-todo-input" v-on:click.stop :ref="'editInput-' + list.id" v-focus autofocus></textarea>
+                  <span v-else class="todo-title" :class="{ completed: list.status === 'completed' }">{{ list.title
+                    }}</span>
+                  <p class="todo-desc" v-if="list.description">{{ list.description | truncate(60) }}</p>
+                </div>
+              </div>
+              <div class="todo-actions">
+                <span class="remove-btn" v-on:click.stop="startEdit(list)" title="Edit Title">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </span>
+                <span class="remove-btn" v-on:click.stop="removeTask(list)" title="Remove Task">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </span>
+              </div>
+            </li>
+          </ul>
         </div>
         <div v-else class="placeholder-text">
           No tasks yet. Add one above to get started!
@@ -187,13 +307,32 @@
       <section class="detail-section" v-bind:class="{ show: selectedTask }" v-if="selectedTask">
         <div class="detail-header">
           <h2>Task Details</h2>
-          <span class="remove-btn" v-on:click="selectedTask = null" title="Close details">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </span>
+          <div style="display: flex; gap: 0.5rem;">
+            <span class="remove-btn" v-on:click="toggleMaximize" :title="isMaximized ? 'Minimize' : 'Maximize'"
+              style="color: var(--text-muted);">
+              <svg v-if="!isMaximized" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="14" y1="10" x2="3" y2="21"></line>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 14 10 14 10 20"></polyline>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+                <polyline points="20 10 14 10 14 4"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+              </svg>
+            </span>
+            <span class="remove-btn" v-on:click="selectedTask = null" title="Close details">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </span>
+          </div>
         </div>
 
         <div class="detail-content">
@@ -267,7 +406,22 @@
                     <circle cx="15" cy="19" r="1"></circle>
                   </svg></span>
                 <input type="checkbox" v-model="sub.isComplete" />
-                <input type="text" v-model="sub.title" placeholder="What needs to be done?" />
+                <div style="flex-grow: 1; display: flex; flex-direction: column;">
+                  <input type="text" v-model="sub.title" placeholder="What needs to be done?"
+                    style="border: none; padding: 0; font-weight: 500; outline: none; background: transparent;" />
+                  <p v-if="sub.description"
+                    style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #6b7280; line-height: 1.2;">
+                    {{ sub.description | truncate(80) }}
+                  </p>
+                </div>
+                <span class="remove-btn" v-on:click="openSubtaskModal(sub)" title="Edit Sub-task"
+                  style="color: var(--text-muted);">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </span>
                 <span class="remove-btn" v-on:click="removeSubtask(sIdx)" title="Remove sub-task">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -315,9 +469,9 @@
     </div>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.24.3/vuedraggable.min.js"></script>
-  <script src="js/ai-service.js"></script>
-  <script src="js/scripts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuedraggable@2.24.3/dist/vuedraggable.umd.min.js"></script>
+  <script src="js/ai-service.js?v=8"></script>
+  <script src="js/scripts.js?v=8"></script>
 </body>
 
 </html>

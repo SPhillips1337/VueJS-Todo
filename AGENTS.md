@@ -16,6 +16,7 @@ The following principles guided the AI assistance in this project:
 - **Architectural Enhancements**: Redesigning the todo data structure to support sub-tasks and detailed notes.
 - **AI Service Integration**: Implementation of a flexible AI service layer supporting multiple providers, custom endpoints, and model selection.
 - **Feature Development**: Implementation of logic for sub-task management, `localStorage` persistence, and AI-powered task automation.
+- **Technical Refinements**: Implementation of robust script/style versioning (cache busting), defensive library registration for third-party components, and advanced focus management using custom Vue directives and `$nextTick`.
 - **Documentation**: Generation of `README.md` and `AGENTS.md` to ensure project clarity.
 
 ## Tools Used
