@@ -27,7 +27,7 @@ body {
 
 #todoApp {
   width: 100%;
-  max-width: 1200px;
+  max-width: none; width: 98%;
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -438,4 +438,71 @@ textarea.desc:focus {
   text-align: center;
   margin-top: 4rem;
   font-style: italic;
+}
+/* Maximized View */
+.main-layout.maximized {
+  grid-template-columns: 1fr;
+}
+
+.main-layout.maximized .list-section {
+  display: none;
+}
+
+.main-layout.maximized .detail-section {
+  width: 100%;
+}
+
+/* Todo Actions & Edit */
+.todo-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.edit-todo-input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  outline: none;
+}
+
+/* Filter & Sort */
+.filter-btn {
+  background: white;
+  border: 1px solid #d1d5db;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.filter-btn:hover {
+  background: #f3f4f6;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.sort-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--primary);
 }

@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', function () {
       addTodoInput: '',
       lists: [],
       hasError: false,
-      selectedTask: null,
+      selectedTask: null, editingId: null,
       aiProvider: 'ollama',
       isGenerating: false,
-      showSettings: false,
+      showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null,
       aiSettings: {
         ollamaEndpoint: 'http://localhost:11434/api/generate',
         ollamaModel: 'llama3',
@@ -18,7 +18,44 @@ document.addEventListener('DOMContentLoaded', function () {
         githubMcpUrl: ''
       }
     },
-    watch: {
+        computed: {
+      filteredLists: function () {
+        let result = this.lists.slice();
+
+        // Filter
+        if (this.filterStatus !== "all") {
+          result = result.filter(item => item.status === this.filterStatus);
+        }
+
+        // Sort
+        if (this.sortBy === "date") {
+            result.sort((a, b) => {
+                const dateA = parseInt(a.id.split("-")[0]);
+                const dateB = parseInt(b.id.split("-")[0]);
+                return this.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+            });
+        } else if (this.sortBy === "title") {
+            result.sort((a, b) => {
+                const titleA = a.title.toLowerCase();
+                const titleB = b.title.toLowerCase();
+                if (titleA < titleB) return this.sortOrder === "asc" ? -1 : 1;
+                if (titleA > titleB) return this.sortOrder === "asc" ? 1 : -1;
+                return 0;
+            });
+        } else if (this.sortBy === "status") {
+            result.sort((a, b) => {
+                const statusA = a.status.toLowerCase();
+                const statusB = b.status.toLowerCase();
+                 if (statusA < statusB) return this.sortOrder === "asc" ? -1 : 1;
+                if (statusA > statusB) return this.sortOrder === "asc" ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+      }
+    },
+watch: {
       lists: {
         handler: function (newLists) {
           this.saveData();
@@ -33,6 +70,26 @@ document.addEventListener('DOMContentLoaded', function () {
     methods: {
       openSettings: function () {
         this.showSettings = true;
+      },
+      toggleMaximize: function () {
+        this.isMaximized = !this.isMaximized;
+      },
+      openSubtaskModal: function (subtask) {
+        this.originalSubtask = subtask;
+        this.editingSubtask = Object.assign({}, subtask);
+        this.showSubtaskModal = true;
+      },
+      closeSubtaskModal: function () {
+        this.showSubtaskModal = false;
+        this.editingSubtask = null;
+        this.originalSubtask = null;
+      },
+      saveSubtask: function () {
+        if (this.originalSubtask && this.editingSubtask) {
+          Object.assign(this.originalSubtask, this.editingSubtask);
+          this.saveData();
+        }
+        this.closeSubtaskModal();
       },
       closeSettings: function () {
         this.showSettings = false;
@@ -105,6 +162,13 @@ document.addEventListener('DOMContentLoaded', function () {
           list.status = "pending";
           list.isComplete = false;
         }
+      },
+      startEdit: function (list) {
+        this.editingId = list.id;
+      },
+      stopEdit: function () {
+        this.editingId = null;
+        this.saveData();
       },
       selectTask: function (list) {
         this.selectedTask = list;
