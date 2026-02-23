@@ -6,6 +6,8 @@ A premium, modern, and mobile-responsive Todo application built with VueJS.
 
 ## Features
 
+- **Enhanced Task Editing**: Redesigned title input with full-width textareas, automatic focus, Enter to save, and Escape to cancel.
+- **Improved UX**: Click-off (blur) saves changes automatically, with robust focus management using Vue directives.
 - **Glassmorphism Design**: A sleek, modern interface with blurred backgrounds and vibrant gradients.
 - **Two-Column Layout**: Optimized for desktop with a task list on the left and a detailed view on the right.
 - **Mobile Responsive**: Seamlessly collapses into a single column on smaller devices.
@@ -19,6 +21,7 @@ A premium, modern, and mobile-responsive Todo application built with VueJS.
 - **AI Subtask Generation**: Leverage Local Ollama or Cloud AI to automatically generate actionable subtasks.
 - **Customizable AI Settings**: Configure your own endpoints, API keys, and model names for full control over AI behavior.
 - **GitHub Integration**: Strategic task generation powered by GitHub repo analysis.
+- **Drag-and-Drop**: Reorder your tasks and sub-tasks with smooth, performant drag-and-drop interactions.
 
 ## Getting Started
 
