@@ -30,7 +30,7 @@ def run():
 
         # 6. Click Edit Button and check input
         buttons = page.query_selector_all(".todo-actions .remove-btn[title='Edit Title']")
-        if buttons:
+        if len(buttons) > 1:
             buttons[1].click() # Edit the second task (which is first in list if pushed? No, push appends. So second task is index 1.)
             # Wait, index 1 is second task. lists.push appends.
             # But draggable iterates lists.

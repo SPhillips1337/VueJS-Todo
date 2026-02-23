@@ -26,8 +26,8 @@ body {
 }
 
 #todoApp {
-  width: 100%;
-  max-width: none; width: 98%;
+  width: 98%;
+  max-width: none;
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -72,7 +72,7 @@ body {
 }
 
 textarea {
-  width: 100%;
+  width: 98%;
   padding: 1rem;
   border-radius: 12px;
   border: 1px solid #d1d5db;
@@ -219,7 +219,7 @@ button.add-btn:hover {
   border: none;
   padding: 0;
   background: transparent;
-  width: 100%;
+  width: 98%;
 }
 
 .title-input:focus {
@@ -342,7 +342,7 @@ textarea.desc:focus {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 98%;
   height: 100%;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(4px);
@@ -410,7 +410,7 @@ textarea.desc:focus {
   border-radius: 8px;
   border: 1px solid #d1d5db;
   font-size: 0.875rem;
-  width: 100%;
+  width: 98%;
 }
 
 .input-group input:focus {
@@ -449,7 +449,7 @@ textarea.desc:focus {
 }
 
 .main-layout.maximized .detail-section {
-  width: 100%;
+  width: 98%;
 }
 
 /* Todo Actions & Edit */
@@ -460,7 +460,7 @@ textarea.desc:focus {
 }
 
 .edit-todo-input {
-  width: 100%;
+  width: 98%;
   padding: 0.25rem 0.5rem;
   font-size: 1rem;
   font-weight: 500;
