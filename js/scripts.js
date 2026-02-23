@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
           this.selectedTask.subtasks.push({
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             title: '',
+            description: '',
             isComplete: false,
             is_agent_task: false,
             target_repo: this.selectedTask.githubUrl || '',
@@ -290,6 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
               if (list.subtasks) {
                 list.subtasks.forEach(sub => {
                   if (sub.is_agent_task === undefined) sub.is_agent_task = false;
+                  if (!sub.description) sub.description = '';
                   if (!sub.target_repo) sub.target_repo = list.githubUrl || '';
                   if (!sub.agent_status) sub.agent_status = 'unassigned';
                 });
@@ -313,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
               this.selectedTask.subtasks.push({
                 id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 title: sub.title,
+                description: sub.description || '',
                 isComplete: false,
                 is_agent_task: sub.is_agent_task ?? false,
                 target_repo: this.selectedTask.githubUrl || '',

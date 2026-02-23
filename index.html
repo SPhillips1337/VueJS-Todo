@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/vue@2"></script>
   <script src="https://unpkg.com/lodash@4"></script>
-  <link rel="stylesheet" href="css/styles.css?v=7">
+  <link rel="stylesheet" href="css/styles.css?v=8">
   <style>
     .header-actions {
       margin-top: 1rem;
@@ -101,6 +101,11 @@
             <label>Title</label>
             <input type="text" v-model="editingSubtask.title" placeholder="What needs to be done?"
               v-on:keydown.enter="saveSubtask">
+          </div>
+          <div class="input-group">
+            <label>Description</label>
+            <textarea v-model="editingSubtask.description" placeholder="Add details for this sub-task..."
+              style="min-height: 100px;"></textarea>
           </div>
           <div class="input-group" style="flex-direction: row; align-items: center; gap: 0.5rem;">
             <input type="checkbox" v-model="editingSubtask.isComplete" id="subtask-complete" style="width: auto;">
@@ -401,7 +406,14 @@
                     <circle cx="15" cy="19" r="1"></circle>
                   </svg></span>
                 <input type="checkbox" v-model="sub.isComplete" />
-                <input type="text" v-model="sub.title" placeholder="What needs to be done?" />
+                <div style="flex-grow: 1; display: flex; flex-direction: column;">
+                  <input type="text" v-model="sub.title" placeholder="What needs to be done?"
+                    style="border: none; padding: 0; font-weight: 500; outline: none; background: transparent;" />
+                  <p v-if="sub.description"
+                    style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #6b7280; line-height: 1.2;">
+                    {{ sub.description | truncate(80) }}
+                  </p>
+                </div>
                 <span class="remove-btn" v-on:click="openSubtaskModal(sub)" title="Edit Sub-task"
                   style="color: var(--text-muted);">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -458,8 +470,8 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vuedraggable@2.24.3/dist/vuedraggable.umd.min.js"></script>
-  <script src="js/ai-service.js?v=7"></script>
-  <script src="js/scripts.js?v=7"></script>
+  <script src="js/ai-service.js?v=8"></script>
+  <script src="js/scripts.js?v=8"></script>
 </body>
 
 </html>
