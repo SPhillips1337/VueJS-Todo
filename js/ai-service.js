@@ -41,6 +41,41 @@ const AIService = {
     }
   },
 
+  async suggestGoals(task, availableGoals, provider = 'ollama') {
+    const settings = this.getSettings();
+    const prompt = this.constructGoalPrompt(task, availableGoals);
+    console.log('Suggesting goals with provider:', provider);
+
+    if (provider === 'ollama') {
+      return this.callOllama(prompt, settings.ollamaEndpoint, settings.ollamaModel);
+    } else {
+      return this.callCloud(prompt, settings.cloudEndpoint, settings.cloudModel, settings.cloudKey);
+    }
+  },
+
+  constructGoalPrompt(task, availableGoals) {
+     const sanitize = (str) => {
+        if (!str) return '';
+        return str.replace(/<[^>]*>/g, '').trim();
+    };
+
+    const safeTitle = sanitize(task.title);
+    const safeDesc = sanitize(task.description || 'No description provided.');
+
+    const goalsList = availableGoals.map(g => `- ID: ${g.id}, Label: ${g.label}, Title: ${g.title}, Desc: ${g.description}`).join('\n');
+
+    return `You are a project manager. Analyze the task and the available goals.
+Task: ${safeTitle}
+Description: ${safeDesc}
+
+Available Goals:
+${goalsList}
+
+Select the goals that best align with this task.
+Output purely a JSON array of strings containing the IDs of the selected goals. Example: ["id1", "id2"].
+If no goals match, return an empty array [].`;
+  },
+
   constructPrompt(task, settings) {
     const sanitize = (str) => {
         if (!str) return '';

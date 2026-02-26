@@ -517,3 +517,73 @@ textarea.desc:focus {
   outline: none;
   border-color: var(--primary);
 }
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  color: var(--text-muted);
+}
+
+.tab-btn:hover {
+  background: #f3f4f6;
+  color: var(--primary);
+}
+
+.tab-btn.active {
+  background: #eef2ff;
+  color: var(--primary);
+}
+
+/* Goals */
+.goals-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.goal-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--primary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+
+.goal-badge-small {
+    background: var(--primary);
+    color: white;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.65rem;
+    margin-right: 0.25rem;
+    vertical-align: middle;
+}
+
+.add-goal-form {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f3f4f6;
+}
+
+.add-goal-dropdown select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
