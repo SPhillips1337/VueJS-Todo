@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/vue@2"></script>
   <script src="https://unpkg.com/lodash@4"></script>
-  <link rel="stylesheet" href="css/styles.css?v=10">
+  <link rel="stylesheet" href="css/styles.css?v=11">
   <style>
     .header-actions {
       margin-top: 1rem;
@@ -101,7 +101,38 @@
             <form class="add-form" v-on:submit.prevent="addTask">
               <textarea name="add-todo" v-model="addTodoInput" placeholder="What needs to be done?"
                 v-bind:class="{error: hasError}" v-on:keydown.enter.exact.prevent="addTask"></textarea>
-              <button type="submit" class="add-btn">Add Task</button>
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
+                <!-- Top Pagination Controls -->
+                <div class="pagination-bar" v-if="totalPages > 1"
+                  style="margin-top: 0; padding: 0; border-top: none; background: transparent;">
+                  <button type="button" class="page-btn" :disabled="currentPage === 1"
+                    @click="changePage(currentPage - 1)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    Prev
+                  </button>
+
+                  <div class="page-numbers">
+                    <button type="button" v-for="p in totalPages" :key="p" class="page-num"
+                      :class="{ active: p === currentPage }" @click="changePage(p)">
+                      {{ p }}
+                    </button>
+                  </div>
+
+                  <button type="button" class="page-btn" :disabled="currentPage === totalPages"
+                    @click="changePage(currentPage + 1)">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+                <div v-else style="flex-grow: 1;"></div>
+                <button type="submit" class="add-btn">Add Task</button>
+              </div>
             </form>
 
             <div class="todo-container" v-if="lists.length">
@@ -258,7 +289,8 @@
 
               <!-- Pagination Controls -->
               <div class="pagination-bar" v-if="totalPages > 1">
-                <button class="page-btn" :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
+                <button type="button" class="page-btn" :disabled="currentPage === 1"
+                  @click="changePage(currentPage - 1)">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
@@ -267,13 +299,14 @@
                 </button>
 
                 <div class="page-numbers">
-                  <button v-for="p in totalPages" :key="p" class="page-num" :class="{ active: p === currentPage }"
-                    @click="changePage(p)">
+                  <button type="button" v-for="p in totalPages" :key="p" class="page-num"
+                    :class="{ active: p === currentPage }" @click="changePage(p)">
                     {{ p }}
                   </button>
                 </div>
 
-                <button class="page-btn" :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
+                <button type="button" class="page-btn" :disabled="currentPage === totalPages"
+                  @click="changePage(currentPage + 1)">
                   Next
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -622,8 +655,8 @@
     </div><!-- End todoApp -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuedraggable@2.24.3/dist/vuedraggable.umd.min.js"></script>
-    <script src="js/ai-service.js?v=10"></script>
-    <script src="js/scripts.js?v=10"></script>
+    <script src="js/ai-service.js?v=11"></script>
+    <script src="js/scripts.js?v=11"></script>
 </body>
 
 </html>
