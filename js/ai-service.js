@@ -124,7 +124,6 @@ Output purely a JSON array of objects with "title" (string).`;
         throw new Error('Cloud Endpoint is required.');
     }
 
-    console.log('Calling Cloud AI:', endpoint, 'using model:', model);
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
