@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
             is_agent_task: false,
             target_repo: this.selectedTask.githubUrl || '',
             agent_status: 'unassigned',
-          goalIds: []
+            goalIds: []
           });
         }
       },
