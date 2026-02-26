@@ -1,201 +1,194 @@
-(function (root, factory) {
-  if (typeof module === 'object' && module.exports) {
-    // Node.js
-    module.exports = factory();
-  } else {
-    // Browser
-    root.AIService = factory();
-  }
-}(typeof self !== 'undefined' ? self : this, function () {
-
+/**
+ * AI Service for Todo App
+ */
 const AIService = {
-  getSettings() {
-    const settings = localStorage.getItem('todo_ai_settings');
-    const defaultSettings = {
-      ollamaEndpoint: 'http://localhost:11434/api/generate',
-      ollamaModel: 'llama3',
-      cloudEndpoint: '',
-      cloudModel: 'gpt-4o',
-      cloudKey: '',
-      githubMcpUrl: ''
-    };
-    if (settings) {
-      try {
-        return Object.assign({}, defaultSettings, JSON.parse(settings));
-      } catch (e) {
-        console.error('Failed to parse settings from localStorage', e);
-      }
-    }
-    return defaultSettings;
-  },
+  // ... existing methods ...
 
-  async generateSubtasks(task, provider = 'ollama') {
+  async suggestGoals(task, currentGoals, provider) {
+    console.log("Suggesting goals with provider:", provider);
     const settings = this.getSettings();
-    const prompt = this.constructPrompt(task, settings);
-    console.log('Generating subtasks with provider:', provider);
+    const prompt = this.constructGoalPrompt(task, currentGoals);
 
     if (provider === 'ollama') {
       return this.callOllama(prompt, settings.ollamaEndpoint, settings.ollamaModel);
     } else {
-      return this.callCloud(prompt, settings.cloudEndpoint, settings.cloudModel, settings.cloudKey);
+      return this.callCloud(prompt, settings.cloudEndpoint, settings.cloudModel, settings.cloudApiKey);
     }
   },
 
-  constructPrompt(task, settings) {
-    const sanitize = (str) => {
-        if (!str) return '';
-        // Remove HTML/XML tags
-        return str.replace(/<[^>]*>/g, '').trim();
+  async generateSubtasks(task, provider) {
+    console.log("Generating subtasks with provider:", provider);
+    const settings = this.getSettings();
+    const prompt = this.constructPrompt(task);
+
+    if (provider === 'ollama') {
+      return this.callOllama(prompt, settings.ollamaEndpoint, settings.ollamaModel);
+    } else {
+      return this.callCloud(prompt, settings.cloudEndpoint, settings.cloudModel, settings.cloudApiKey);
+    }
+  },
+
+  getSettings() {
+    const saved = localStorage.getItem('aiSettings');
+    const defaultSettings = {
+      ollamaEndpoint: '/api/generate',
+      ollamaModel: 'llama3',
+      cloudEndpoint: 'https://api.openai.com/v1/chat/completions',
+      cloudModel: 'gpt-4o',
+      cloudApiKey: '',
+      githubMcpUrl: 'http://localhost:3000/github'
     };
+    return saved ? JSON.parse(saved) : defaultSettings;
+  },
 
-    const safeTitle = sanitize(task.title);
-    const safeDesc = sanitize(task.description || 'No description provided.');
+  constructGoalPrompt(task, currentGoals) {
+    const goalList = currentGoals.map(g => g.title).join(', ');
+    return `Suggest 3 high-level categories for this task: "${task.title}".
+    Current categories are: ${goalList}.
+    Respond ONLY with a JSON array of strings. 
+    Example: ["Category 1", "Category 2", "Category 3"]`;
+  },
 
-    const basePrompt = `Task: ${safeTitle}\nDescription: ${safeDesc}`;
+  constructPrompt(task) {
+    return `Break down the task "${task.title}" into actionable subtasks. 
+    Task description: ${task.description || 'none'}.
+    Respond ONLY with a JSON array of objects with keys: "title", "description", "is_agent_task".
+    Example: [{"title": "Step 1", "description": "Do X", "is_agent_task": false}]`;
+  },
 
-    if (task.githubUrl && task.githubUrl.trim() !== '') {
-      let sanitizedUrl = task.githubUrl.trim();
-      try {
-        const url = new URL(sanitizedUrl);
-        if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-             throw new Error('Only HTTP/HTTPS URLs are allowed.');
-        }
-        if (url.hostname !== 'github.com') {
-             throw new Error('Only github.com URLs are allowed.');
-        }
-        // Basic path check: user/repo
-        if (url.pathname.split('/').filter(p => p).length < 2) {
-             throw new Error('Invalid GitHub repository format.');
-        }
-        sanitizedUrl = url.href;
-      } catch (e) {
-        throw new Error('Invalid GitHub repository URL: ' + e.message);
+  parseResponse(text) {
+    if (typeof text !== 'string') return text;
+
+    try {
+      // 1. Precise JSON array match
+      const arrayMatch = text.match(/\[\s*[\s\S]*?\s*\]/);
+      if (arrayMatch) {
+        try { return JSON.parse(arrayMatch[0]); } catch (e) { }
       }
 
-      let prompt = `You are a senior software architect. Analyze the repository at ${sanitizedUrl}.
-Context:
-<user_task>
-${basePrompt}
-</user_task>
+      // 2. Look for nested goals if model returned an object with a stringified key
+      // This handles the specific failure seen in the logs
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const obj = JSON.parse(jsonMatch[0]);
+        // If it's a single key that looks like a stringified object/array, try to parse it
+        for (let key in obj) {
+          if (key.includes('"goals"') || key.includes('[')) {
+            try {
+              const inner = JSON.parse(key);
+              if (inner.goals) return inner.goals;
+              if (Array.isArray(inner)) return inner;
+            } catch (e) { }
+          }
+          // Also check if values are the arrays
+          if (Array.isArray(obj[key])) return obj[key];
+          if (key === 'goals' && Array.isArray(obj.goals)) return obj.goals;
+        }
+        return obj;
+      }
 
-Generate 3-5 strategic development tasks focusing on code structure, implementation steps, and testing.
-The AI should use the GitHub MCP server ${settings.githubMcpUrl || 'at the configured endpoint'} to deeply analyze the project structure, recent commits, or issues.
-Output purely a JSON array of objects with "title" (string), "is_agent_task": true, and "agent_status": "unassigned".`;
-      return prompt;
-    } else {
-      return `You are a productivity assistant.
-Context:
-<user_task>
-${basePrompt}
-</user_task>
-
-Generate 3-5 actionable subtasks.
-Output purely a JSON array of objects with "title" (string).`;
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse AI response", text, e);
+      throw new Error("Invalid AI response format: " + e.message);
     }
   },
 
   async callOllama(prompt, endpoint, model) {
-    try {
+    const payload = {
+      model: model || 'llama3',
+      prompt: prompt + " Respond ONLY with valid JSON array.",
+      stream: false,
+      format: 'json'
+    };
+
+    const attemptDirect = async () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: model || 'llama3',
-          prompt: prompt + " Respond ONLY with valid JSON array.",
-          stream: false,
-          format: 'json'
-        })
+        body: JSON.stringify(payload)
       });
-
       if (!response.ok) throw new Error('Ollama API error: ' + response.statusText);
-      const data = await response.json();
-      return this.parseResponse(data.response);
+      return response.json();
+    };
+
+    const attemptProxy = async () => {
+      console.log('Attempting proxy via ai-proxy.php...');
+      const response = await fetch('ai-proxy.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint, payload })
+      });
+      if (!response.ok) {
+        // Try to get error text if not JSON
+        const text = await response.text();
+        throw new Error(`Proxy error (${response.status}): ${text || response.statusText}`);
+      }
+      return response.json();
+    };
+
+    try {
+      // Try direct first (low latency)
+      const data = await attemptDirect();
+      // If network succeeds, any parse error should be thrown normally without proxy retry
+      try {
+        return this.parseResponse(data.response);
+      } catch (parseErr) {
+        throw new Error("AI returned data but format was invalid: " + parseErr.message);
+      }
     } catch (e) {
-      console.error('Ollama failed', e);
-      throw e; // Propagate error
+      // ONLY retry proxy if it was a network failure (fetch failed or CORS)
+      if (e.message.includes('fetch') || e.message.includes('Network') || e.message.includes('CORS') || e.message.includes('Mixed Content')) {
+        console.warn('Direct Ollama call failed (Network/CORS), trying proxy...', e);
+        try {
+          const data = await attemptProxy();
+          return this.parseResponse(data.response);
+        } catch (proxyErr) {
+          console.error('All connection attempts failed', proxyErr);
+
+          let instructions = "Connection to Ollama failed. This is likely a CORS or Network issue.\n\n";
+
+          if (proxyErr.message.includes('405') || proxyErr.message.includes('Not Allowed')) {
+            instructions += "❌ PROXY ERROR: Your Nginx server rejected the PHP proxy (405 Not Allowed).\n" +
+              "Since you chose Option C (Nginx Proxy), ensure your app settings use '/api/generate' exactly.\n\n";
+          }
+
+          instructions += "FIX (Option C - Nginx): Ensure app endpoint is '/api/generate' and Nginx is reloaded.\n" +
+            "FIX (Option B - Ollama): Set OLLAMA_ORIGINS on the remote machine (192.168.5.157).";
+
+          throw new Error(instructions);
+        }
+      } else {
+        // It was a parse error or API error (404/500/etc) - do not retry via proxy
+        throw e;
+      }
     }
   },
 
   async callCloud(prompt, endpoint, model, apiKey) {
     if (!apiKey) {
-        throw new Error('API Key is required for Cloud AI.');
+      throw new Error("Cloud AI API Key is missing. Please set it in Settings.");
     }
-    if (!endpoint) {
-        throw new Error('Cloud Endpoint is required.');
-    }
-
     try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: model || 'gpt-4o',
-                messages: [
-                    { role: "system", content: "You are a helpful assistant. Output JSON only." },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.7
-            })
-        });
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7
+        })
+      });
 
-        if (!response.ok) {
-            throw new Error(`Cloud API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
-        return this.parseResponse(content);
-
+      if (!response.ok) throw new Error('Cloud AI API error: ' + response.statusText);
+      const data = await response.json();
+      return this.parseResponse(data.choices[0].message.content);
     } catch (e) {
-        console.error('Cloud AI call failed', e);
-        throw e;
-    }
-  },
-
-  mockCallCloud(prompt, endpoint, model, apiKey) {
-    console.log('Simulating Cloud AI call to:', endpoint, 'using model:', model);
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve(this.getMockData(prompt.includes('GitHub')));
-        }, 1000);
-    });
-  },
-
-  parseResponse(text) {
-    try {
-      // Robust JSON extraction: look for [ ... ]
-      const start = text.indexOf('[');
-      const end = text.lastIndexOf(']');
-      if (start !== -1 && end !== -1 && end > start) {
-         const jsonStr = text.substring(start, end + 1);
-         return JSON.parse(jsonStr);
-      }
-      return JSON.parse(text);
-    } catch (e) {
-      console.error('Failed to parse JSON', e);
-      return [];
-    }
-  },
-
-  getMockData(isGithub) {
-    if (isGithub) {
-      return [
-        { title: "Analyze repo structure", is_agent_task: true, agent_status: "unassigned" },
-        { title: "Identify integration points", is_agent_task: true, agent_status: "unassigned" },
-        { title: "Draft implementation plan", is_agent_task: true, agent_status: "unassigned" }
-      ];
-    } else {
-      return [
-        { title: "Research requirements" },
-        { title: "Draft outline" },
-        { title: "Implement core logic" }
-      ];
+      console.error('Cloud AI failed', e);
+      throw e;
     }
   }
 };
-
-return AIService;
-}));

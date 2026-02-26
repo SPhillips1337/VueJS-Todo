@@ -36,7 +36,7 @@ def run():
             # But draggable iterates lists.
             # So last added is at bottom.
             # Let's edit the last one.
-            page.wait_for_selector("input.edit-todo-input")
+            page.wait_for_selector(".edit-todo-input")
             print("Edit input appeared.")
 
             # 7. Take screenshot of Edit Mode
@@ -44,7 +44,7 @@ def run():
             print("Screenshot taken: edit_mode.png")
 
             # Cancel edit (blur)
-            page.evaluate("document.querySelector('input.edit-todo-input').blur()")
+            page.evaluate("document.querySelector('.edit-todo-input').blur()")
 
         # 8. Select a task to see details
         page.click(".todo-item:nth-child(1)")
@@ -78,6 +78,36 @@ def run():
 
             # Close modal
             page.click(".modal-footer .btn-secondary")
+
+
+        # 11. Verify Tabs and Goals
+        tabs = page.wait_for_selector(".tabs")
+        if tabs:
+            print("Tabs found.")
+            # Switch to Goals
+            page.click("button.tab-btn:has-text('Goals')")
+            page.wait_for_selector(".goals-view")
+            print("Switched to Goals view.")
+
+            # Add a Goal
+            page.fill("input[placeholder*='Goal Title']", "Test Goal 1")
+            page.fill("input[placeholder='Label']", "TG1")
+
+            # Use specific selector for goal form button inside goals-view
+            page.click(".goals-view .add-goal-form button.add-btn")
+
+            # Verify Goal Added
+            page.wait_for_selector(".goal-item", state="visible")
+            content = page.text_content(".goal-list")
+            if "Test Goal 1" in content:
+                print("Goal added successfully.")
+            else:
+                print(f"Goal text not found. Content: {content}")
+
+            # Switch back to Tasks
+            page.click("button.tab-btn:has-text('Tasks')")
+            page.wait_for_selector(".todo-container")
+            print("Switched back to Tasks view.")
 
         browser.close()
 

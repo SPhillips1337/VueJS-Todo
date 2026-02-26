@@ -28,12 +28,15 @@ document.addEventListener('DOMContentLoaded', function () {
       addTodoInput: '',
       lists: [],
       hasError: false,
-      selectedTask: null, editingId: null,
+      selectedTask: null, editingId: null, goals: [], currentTab: "tasks", editingGoal: null, originalGoal: null,
       aiProvider: 'ollama',
-      isGenerating: false,
-      showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null, originalTitle: null,
+      isGenerating: false, isTestingAI: false, aiDiagnosticResult: '',
+      showSettings: false, isMaximized: false, showSubtaskModal: false,
+      filterStatus: "all", sortBy: "date", sortOrder: "desc",
+      searchQuery: '', currentPage: 1, itemsPerPage: 10,
+      editingSubtask: null, originalSubtask: null, originalTitle: null,
       aiSettings: {
-        ollamaEndpoint: 'http://localhost:11434/api/generate',
+        ollamaEndpoint: '/api/generate',
         ollamaModel: 'llama3',
         cloudEndpoint: '',
         cloudModel: 'gpt-4o',
@@ -45,7 +48,16 @@ document.addEventListener('DOMContentLoaded', function () {
       filteredLists: function () {
         let result = this.lists.slice();
 
-        // Filter
+        // Search Filter
+        if (this.searchQuery) {
+          const q = this.searchQuery.toLowerCase();
+          result = result.filter(item =>
+            item.title.toLowerCase().includes(q) ||
+            (item.description && item.description.toLowerCase().includes(q))
+          );
+        }
+
+        // Status Filter
         if (this.filterStatus !== "all") {
           result = result.filter(item => item.status === this.filterStatus);
         }
@@ -78,6 +90,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         return result;
+      },
+      paginatedLists: function () {
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        return this.filteredLists.slice(start, end);
+      },
+      totalPages: function () {
+        return Math.ceil(this.filteredLists.length / this.itemsPerPage) || 1;
       }
     },
     watch: {
@@ -86,7 +106,11 @@ document.addEventListener('DOMContentLoaded', function () {
           this.debouncedSaveData();
         },
         deep: true
-      }
+      },
+      searchQuery: function () { this.currentPage = 1; },
+      filterStatus: function () { this.currentPage = 1; },
+      sortBy: function () { this.currentPage = 1; },
+      sortOrder: function () { this.currentPage = 1; }
     },
     created: function () {
       this.debouncedSaveData = _.debounce(this.saveData, 500);
@@ -124,12 +148,11 @@ document.addEventListener('DOMContentLoaded', function () {
         this.loadSettings(); // Revert changes if not saved
       },
       saveSettings: function () {
-        localStorage.setItem('todo_ai_settings', JSON.stringify(this.aiSettings));
+        localStorage.setItem('aiSettings', JSON.stringify(this.aiSettings));
         this.showSettings = false;
-        // Update AIService global settings if needed, though it reads from storage
       },
       loadSettings: function () {
-        const settings = localStorage.getItem('todo_ai_settings');
+        const settings = localStorage.getItem('aiSettings');
         if (settings) {
           try {
             this.aiSettings = Object.assign({}, this.aiSettings, JSON.parse(settings));
@@ -155,7 +178,8 @@ document.addEventListener('DOMContentLoaded', function () {
           status: 'pending',
           is_agent_task: false,
           target_repo: '',
-          agent_status: 'unassigned'
+          agent_status: 'unassigned',
+          goalIds: []
         };
 
         this.lists.push(newTodo);
@@ -230,7 +254,8 @@ document.addEventListener('DOMContentLoaded', function () {
             isComplete: false,
             is_agent_task: false,
             target_repo: this.selectedTask.githubUrl || '',
-            agent_status: 'unassigned'
+            agent_status: 'unassigned',
+            goalIds: []
           });
         }
       },
@@ -241,6 +266,7 @@ document.addEventListener('DOMContentLoaded', function () {
       },
       saveData: function () {
         localStorage.setItem('todo_app_data', JSON.stringify(this.lists));
+        localStorage.setItem('todo_app_goals', JSON.stringify(this.goals));
       },
       exportData: function () {
         const dataStr = JSON.stringify(this.lists, null, 2);
@@ -284,6 +310,16 @@ document.addEventListener('DOMContentLoaded', function () {
       },
       loadData: function () {
         const data = localStorage.getItem('todo_app_data');
+        const goalData = localStorage.getItem('todo_app_goals');
+
+        if (goalData) {
+          try {
+            this.goals = JSON.parse(goalData);
+          } catch (e) {
+            console.error('Failed to load goals', e);
+            this.goals = [];
+          }
+        }
         if (data) {
           try {
             this.lists = JSON.parse(data);
@@ -295,6 +331,9 @@ document.addEventListener('DOMContentLoaded', function () {
               }
               if (!list.githubUrl) {
                 list.githubUrl = "";
+              }
+              if (!list.goalIds) {
+                list.goalIds = [];
               }
               // Subtask migration
               if (list.subtasks) {
@@ -311,6 +350,93 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Failed to load data', e);
             this.lists = [];
           }
+        }
+      },
+
+      addGoal: function (title, label, description) {
+        if (!title || !label) {
+          alert("Title and Label are required.");
+          return;
+        }
+        this.goals.push({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          title: title,
+          label: label.substring(0, 5).toUpperCase(),
+          description: description || ''
+        });
+        this.debouncedSaveData();
+      },
+      removeGoal: function (goalId) {
+        if (!confirm("Are you sure you want to delete this goal? It will be removed from all tasks.")) return;
+
+        const index = this.goals.findIndex(g => g.id === goalId);
+        if (index > -1) {
+          this.goals.splice(index, 1);
+          // Remove from tasks
+          this.lists.forEach(task => {
+            if (task.goalIds) {
+              const gIndex = task.goalIds.indexOf(goalId);
+              if (gIndex > -1) task.goalIds.splice(gIndex, 1);
+            }
+          });
+          this.debouncedSaveData();
+        }
+      },
+      updateGoal: function (goal) {
+        const index = this.goals.findIndex(g => g.id === goal.id);
+        if (index > -1) {
+          // Update in place
+          this.goals.splice(index, 1, goal);
+          this.debouncedSaveData();
+        }
+      },
+      toggleGoalForTask: function (task, goalId) {
+        if (!task.goalIds) {
+          this.$set(task, 'goalIds', []);
+        }
+        const index = task.goalIds.indexOf(goalId);
+        if (index > -1) {
+          task.goalIds.splice(index, 1);
+        } else {
+          task.goalIds.push(goalId);
+        }
+        this.debouncedSaveData();
+      },
+      getGoal: function (goalId) {
+        return this.goals.find(g => g.id === goalId);
+      },
+      suggestGoalsForSelected: async function () {
+        if (!this.selectedTask) return;
+        this.isGenerating = true;
+        try {
+          const suggestedIds = await AIService.suggestGoals(this.selectedTask, this.goals, this.aiProvider);
+          if (suggestedIds && Array.isArray(suggestedIds)) {
+            // Apply suggestions
+            if (suggestedIds.length === 0) {
+              alert("No suitable goals found.");
+            } else {
+              let addedCount = 0;
+              suggestedIds.forEach(sid => {
+                // Check if goal exists and not already assigned
+                if (this.goals.find(g => g.id === sid) && (!this.selectedTask.goalIds || !this.selectedTask.goalIds.includes(sid))) {
+                  if (!this.selectedTask.goalIds) this.$set(this.selectedTask, 'goalIds', []);
+                  this.selectedTask.goalIds.push(sid);
+                  addedCount++;
+                }
+              });
+              if (addedCount > 0) {
+                this.debouncedSaveData();
+                alert(`Added ${addedCount} suggested goals.`);
+              } else {
+                alert("No new goals suggested (all matching goals already assigned).");
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to suggest goals", e);
+          alert("Failed to suggest goals: " + (e.message || "Unknown error"));
+        } finally {
+          this.isGenerating = false;
         }
       },
       generateSubtasksForSelected: async function () {
@@ -338,6 +464,30 @@ document.addEventListener('DOMContentLoaded', function () {
           alert("Failed to generate subtasks: " + (e.message || "Unknown error"));
         } finally {
           this.isGenerating = false;
+        }
+      },
+      testAIConnection: async function () {
+        this.isTestingAI = true;
+        this.aiDiagnosticResult = "Starting diagnostic...\n";
+        try {
+          this.aiDiagnosticResult += "Attempting to reach Ollama via AIService...\n";
+          // We'll use a simple prompt to test
+          const result = await AIService.callOllama("Respond with [\"OK\"]", this.aiSettings.ollamaEndpoint, this.aiSettings.ollamaModel);
+          if (Array.isArray(result) && result[0] === "OK") {
+            this.aiDiagnosticResult += "✅ Success! AI returned: " + JSON.stringify(result);
+          } else {
+            this.aiDiagnosticResult += "⚠️ Partial success. AI returned unexpected format: " + JSON.stringify(result);
+          }
+        } catch (e) {
+          this.aiDiagnosticResult += "❌ Failed:\n" + e.message;
+        } finally {
+          this.isTestingAI = false;
+        }
+      },
+      changePage: function (page) {
+        if (page >= 1 && page <= this.totalPages) {
+          this.currentPage = page;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
     }
