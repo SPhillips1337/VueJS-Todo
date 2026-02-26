@@ -31,7 +31,10 @@ document.addEventListener('DOMContentLoaded', function () {
       selectedTask: null, editingId: null, goals: [], currentTab: "tasks", editingGoal: null, originalGoal: null,
       aiProvider: 'ollama',
       isGenerating: false, isTestingAI: false, aiDiagnosticResult: '',
-      showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null, originalTitle: null,
+      showSettings: false, isMaximized: false, showSubtaskModal: false,
+      filterStatus: "all", sortBy: "date", sortOrder: "desc",
+      searchQuery: '', currentPage: 1, itemsPerPage: 10,
+      editingSubtask: null, originalSubtask: null, originalTitle: null,
       aiSettings: {
         ollamaEndpoint: '/api/generate',
         ollamaModel: 'llama3',
@@ -45,7 +48,16 @@ document.addEventListener('DOMContentLoaded', function () {
       filteredLists: function () {
         let result = this.lists.slice();
 
-        // Filter
+        // Search Filter
+        if (this.searchQuery) {
+          const q = this.searchQuery.toLowerCase();
+          result = result.filter(item =>
+            item.title.toLowerCase().includes(q) ||
+            (item.description && item.description.toLowerCase().includes(q))
+          );
+        }
+
+        // Status Filter
         if (this.filterStatus !== "all") {
           result = result.filter(item => item.status === this.filterStatus);
         }
@@ -78,6 +90,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         return result;
+      },
+      paginatedLists: function () {
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        return this.filteredLists.slice(start, end);
+      },
+      totalPages: function () {
+        return Math.ceil(this.filteredLists.length / this.itemsPerPage) || 1;
       }
     },
     watch: {
@@ -86,7 +106,11 @@ document.addEventListener('DOMContentLoaded', function () {
           this.debouncedSaveData();
         },
         deep: true
-      }
+      },
+      searchQuery: function () { this.currentPage = 1; },
+      filterStatus: function () { this.currentPage = 1; },
+      sortBy: function () { this.currentPage = 1; },
+      sortOrder: function () { this.currentPage = 1; }
     },
     created: function () {
       this.debouncedSaveData = _.debounce(this.saveData, 500);
@@ -458,6 +482,12 @@ document.addEventListener('DOMContentLoaded', function () {
           this.aiDiagnosticResult += "❌ Failed:\n" + e.message;
         } finally {
           this.isTestingAI = false;
+        }
+      },
+      changePage: function (page) {
+        if (page >= 1 && page <= this.totalPages) {
+          this.currentPage = page;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
     }
