@@ -53,8 +53,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Sort
         if (this.sortBy === "date") {
           result.sort((a, b) => {
-            const dateA = parseInt(a.id.split("-")[0]);
-            const dateB = parseInt(b.id.split("-")[0]);
+            const idA = String(a.id);
+            const idB = String(b.id);
+            const dateA = parseInt(idA.split("-")[0]);
+            const dateB = parseInt(idB.split("-")[0]);
             return this.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
           });
         } else if (this.sortBy === "title") {
@@ -263,7 +265,10 @@ document.addEventListener('DOMContentLoaded', function () {
           try {
             const data = JSON.parse(e.target.result);
             if (Array.isArray(data)) {
-              this.lists = data.filter(item => item && typeof item === "object" && typeof item.id !== "undefined" && typeof item.title === "string");
+              this.lists = data.filter(item => item && typeof item === "object" && typeof item.id !== "undefined" && typeof item.title === "string").map(item => {
+                item.id = String(item.id);
+                return item;
+              });
               this.debouncedSaveData();
               alert("Data imported successfully!");
             } else {
@@ -284,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
             this.lists = JSON.parse(data);
             // Migration
             this.lists.forEach(list => {
+              if (list.id !== undefined) list.id = String(list.id);
               if (!list.status) {
                 list.status = list.isComplete ? "completed" : "pending";
               }
@@ -293,6 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
               // Subtask migration
               if (list.subtasks) {
                 list.subtasks.forEach(sub => {
+                  if (sub.id !== undefined) sub.id = String(sub.id);
                   if (sub.is_agent_task === undefined) sub.is_agent_task = false;
                   if (!sub.description) sub.description = '';
                   if (!sub.target_repo) sub.target_repo = list.githubUrl || '';
