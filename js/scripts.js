@@ -30,10 +30,10 @@ document.addEventListener('DOMContentLoaded', function () {
       hasError: false,
       selectedTask: null, editingId: null, goals: [], currentTab: "tasks", editingGoal: null, originalGoal: null,
       aiProvider: 'ollama',
-      isGenerating: false,
+      isGenerating: false, isTestingAI: false, aiDiagnosticResult: '',
       showSettings: false, isMaximized: false, showSubtaskModal: false, filterStatus: "all", sortBy: "date", sortOrder: "desc", editingSubtask: null, originalSubtask: null, originalTitle: null,
       aiSettings: {
-        ollamaEndpoint: 'http://localhost:11434/api/generate',
+        ollamaEndpoint: '/api/generate',
         ollamaModel: 'llama3',
         cloudEndpoint: '',
         cloudModel: 'gpt-4o',
@@ -124,12 +124,11 @@ document.addEventListener('DOMContentLoaded', function () {
         this.loadSettings(); // Revert changes if not saved
       },
       saveSettings: function () {
-        localStorage.setItem('todo_ai_settings', JSON.stringify(this.aiSettings));
+        localStorage.setItem('aiSettings', JSON.stringify(this.aiSettings));
         this.showSettings = false;
-        // Update AIService global settings if needed, though it reads from storage
       },
       loadSettings: function () {
-        const settings = localStorage.getItem('todo_ai_settings');
+        const settings = localStorage.getItem('aiSettings');
         if (settings) {
           try {
             this.aiSettings = Object.assign({}, this.aiSettings, JSON.parse(settings));
@@ -441,6 +440,24 @@ document.addEventListener('DOMContentLoaded', function () {
           alert("Failed to generate subtasks: " + (e.message || "Unknown error"));
         } finally {
           this.isGenerating = false;
+        }
+      },
+      testAIConnection: async function () {
+        this.isTestingAI = true;
+        this.aiDiagnosticResult = "Starting diagnostic...\n";
+        try {
+          this.aiDiagnosticResult += "Attempting to reach Ollama via AIService...\n";
+          // We'll use a simple prompt to test
+          const result = await AIService.callOllama("Respond with [\"OK\"]", this.aiSettings.ollamaEndpoint, this.aiSettings.ollamaModel);
+          if (Array.isArray(result) && result[0] === "OK") {
+            this.aiDiagnosticResult += "✅ Success! AI returned: " + JSON.stringify(result);
+          } else {
+            this.aiDiagnosticResult += "⚠️ Partial success. AI returned unexpected format: " + JSON.stringify(result);
+          }
+        } catch (e) {
+          this.aiDiagnosticResult += "❌ Failed:\n" + e.message;
+        } finally {
+          this.isTestingAI = false;
         }
       }
     }
